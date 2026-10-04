@@ -1,0 +1,34 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "cloud_connection": {
+        "default": "mdi:cloud-check-outline",
+        "state": { "off": "mdi:cloud-off-outline" }
+      }
+    },
+    "button": {
+      "open_gate": { "default": "mdi:gate-open" },
+      "open_garage": { "default": "mdi:garage-open-variant" },
+      "open_door": { "default": "mdi:door-open" },
+      "open_other": { "default": "mdi:lock-open-variant-outline" },
+      "open_common_area": { "default": "mdi:door-open" }
+    },
+    "sensor": {
+      "last_result": {
+        "default": "mdi:history",
+        "state": {
+          "ok": "mdi:check-circle-outline",
+          "gateway_unreachable": "mdi:router-wireless-off",
+          "unauthorized": "mdi:key-alert-outline",
+          "forbidden": "mdi:account-lock-outline",
+          "timeout": "mdi:timer-alert-outline",
+          "error": "mdi:alert-circle-outline"
+        }
+      }
+    }
+  },
+  "services": {
+    "open_common_area": { "service": "mdi:door-open" },
+    "book_common_area": { "service": "mdi:calendar-plus" }
+  }
+}

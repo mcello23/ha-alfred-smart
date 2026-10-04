@@ -1,0 +1,196 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Iniciar sesión en Alfred Smart",
+        "description": "Usa el mismo correo y la misma contraseña que en la app de Alfred.",
+        "data": {
+          "email": "Correo electrónico",
+          "password": "Contraseña"
+        },
+        "data_description": {
+          "email": "El correo de tu cuenta de Alfred Smart.",
+          "password": "Se guarda en Home Assistant para renovar la sesión sin que tengas que hacer nada."
+        }
+      },
+      "asset": {
+        "title": "Elige tu vivienda",
+        "description": "Esta cuenta tiene acceso a más de una vivienda. Vuelve a añadir la integración para cada una de las demás.",
+        "data": {
+          "asset_id": "Vivienda"
+        }
+      },
+      "asset_manual": {
+        "title": "Código de la vivienda",
+        "description": "No se ha podido descubrir tu vivienda automáticamente. Abre app.alfredsmart.com en el navegador del ordenador, entra en tu vivienda y, en las herramientas de desarrollo (pestaña Red), busca una petición a `/devices`: el valor de `asset_id=` es el código (por ejemplo, `ABCD1234EFGHI`).",
+        "data": {
+          "asset_id": "Código de la vivienda (asset_id)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Vuelve a iniciar sesión",
+        "description": "Alfred Smart ha rechazado la contraseña de {email}.",
+        "data": {
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Correo o contraseña incorrectos.",
+      "cannot_connect": "No se ha podido conectar con Alfred Smart.",
+      "invalid_asset": "Alfred Smart no reconoce este código de vivienda.",
+      "unknown": "Error inesperado."
+    },
+    "abort": {
+      "already_configured": "Esta vivienda ya está configurada.",
+      "reauth_successful": "Sesión renovada."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones",
+        "data": {
+          "scan_interval": "Intervalo de consulta"
+        },
+        "data_description": {
+          "scan_interval": "Cada cuántos minutos se lee la lista de accesos. Abrir no depende de esto."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "cloud_connection": {
+        "name": "Conexión con Alfred"
+      }
+    },
+    "button": {
+      "open_gate": {
+        "name": "Abrir"
+      },
+      "open_garage": {
+        "name": "Abrir"
+      },
+      "open_door": {
+        "name": "Abrir"
+      },
+      "open_other": {
+        "name": "Abrir"
+      },
+      "open_common_area": {
+        "name": "Abrir"
+      }
+    },
+    "sensor": {
+      "last_result": {
+        "name": "Última apertura",
+        "state": {
+          "ok": "Abierto",
+          "gateway_unreachable": "Gateway sin conexión",
+          "unauthorized": "Sesión rechazada",
+          "forbidden": "Sin permiso",
+          "timeout": "Sin respuesta",
+          "error": "Error"
+        },
+        "state_attributes": {
+          "last_attempt": {
+            "name": "Último intento"
+          },
+          "http_status": {
+            "name": "Código HTTP"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "open_gateway_unreachable": {
+      "message": "{name} no se ha abierto: el servidor de Alfred no consigue comunicarse con el gateway (HTTP {status}). No es un fallo de Home Assistant: usa la llave y avisa al administrador de la finca."
+    },
+    "common_area_gateway_unreachable": {
+      "message": "Zona común {name}: el servidor de Alfred no consigue comunicarse con el gateway (HTTP {status})."
+    },
+    "open_unauthorized": {
+      "message": "{name} no se ha abierto: Alfred ha rechazado la sesión. Vuelve a introducir la contraseña de la integración."
+    },
+    "common_area_unauthorized": {
+      "message": "Zona común {name}: Alfred ha rechazado la sesión. Vuelve a introducir la contraseña de la integración."
+    },
+    "open_forbidden": {
+      "message": "{name} no se ha abierto: tu cuenta no tiene permiso para usar este acceso (HTTP {status})."
+    },
+    "common_area_forbidden": {
+      "message": "Zona común {name}: sin permiso (HTTP {status}). ¿Tienes una reserva en vigor?"
+    },
+    "open_timeout": {
+      "message": "Alfred no ha respondido a tiempo al abrir {name}. Puede que se haya abierto igualmente: compruébalo antes de volver a intentarlo."
+    },
+    "common_area_timeout": {
+      "message": "Zona común {name}: Alfred no ha respondido a tiempo. Puede que la petición se haya procesado igualmente."
+    },
+    "open_error": {
+      "message": "{name} no se ha abierto (HTTP {status})."
+    },
+    "common_area_error": {
+      "message": "Zona común {name}: Alfred ha rechazado la petición (HTTP {status}). Puede que la franja esté ocupada o fuera del horario."
+    },
+    "entry_not_found": {
+      "message": "No hay ninguna vivienda de Alfred Smart cargada con el id {entry_id}."
+    },
+    "not_loaded": {
+      "message": "Alfred Smart no está cargado."
+    },
+    "entry_required": {
+      "message": "Hay más de una vivienda configurada: indica cuál."
+    },
+    "sensor_uuid_required": {
+      "message": "No se conoce el sensor de la zona común {area}: indica `sensor_uuid`."
+    },
+    "end_before_start": {
+      "message": "El fin tiene que ser posterior al inicio."
+    }
+  },
+  "services": {
+    "open_common_area": {
+      "name": "Abrir zona común",
+      "description": "Abre la puerta de una zona común (gimnasio, club social…). Normalmente exige una reserva en vigor.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Vivienda",
+          "description": "Solo hace falta si tienes más de una vivienda configurada."
+        },
+        "common_area_id": {
+          "name": "Zona común",
+          "description": "Identificador (UUID) de la zona común."
+        },
+        "sensor_uuid": {
+          "name": "Sensor",
+          "description": "UUID del lector de la puerta. Si no se indica, se usa el descubierto automáticamente."
+        }
+      }
+    },
+    "book_common_area": {
+      "name": "Reservar zona común",
+      "description": "Reserva una franja horaria en una zona común.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Vivienda",
+          "description": "Solo hace falta si tienes más de una vivienda configurada."
+        },
+        "common_area_id": {
+          "name": "Zona común",
+          "description": "Identificador (UUID) de la zona común."
+        },
+        "start": {
+          "name": "Inicio",
+          "description": "Inicio de la reserva (zona horaria de Home Assistant)."
+        },
+        "end": {
+          "name": "Fin",
+          "description": "Fin de la reserva."
+        }
+      }
+    }
+  }
+}

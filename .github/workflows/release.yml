@@ -1,0 +1,24 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check that manifest.json matches the tag
+        run: |
+          version=$(jq -r .version custom_components/alfred_smart/manifest.json)
+          test "v$version" = "${{ github.event.release.tag_name }}" || {
+            echo "manifest.json says $version, tag is ${{ github.event.release.tag_name }}"; exit 1; }
+      - name: Zip the integration
+        run: cd custom_components/alfred_smart && zip -r ../../alfred_smart.zip . -x '__pycache__/*'
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: alfred_smart.zip

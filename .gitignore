@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+# The output of scripts/alfred_discover.py --dump is redacted, but never commit it by accident.
+alfred*.json

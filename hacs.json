@@ -1,0 +1,6 @@
+{
+  "name": "Alfred Smart",
+  "homeassistant": "2025.2.0",
+  "country": ["ES"],
+  "render_readme": true
+}

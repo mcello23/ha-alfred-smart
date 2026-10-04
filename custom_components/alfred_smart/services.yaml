@@ -1,0 +1,37 @@
+open_common_area:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: alfred_smart
+    common_area_id:
+      required: true
+      example: "00000000-0000-4000-8000-000000000001"
+      selector:
+        text:
+    sensor_uuid:
+      example: "00000000-0000-4000-8000-0000000000aa"
+      selector:
+        text:
+
+book_common_area:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: alfred_smart
+    common_area_id:
+      required: true
+      example: "00000000-0000-4000-8000-000000000001"
+      selector:
+        text:
+    start:
+      required: true
+      example: "2026-10-05 07:00:00"
+      selector:
+        datetime:
+    end:
+      required: true
+      example: "2026-10-05 07:30:00"
+      selector:
+        datetime:

@@ -1,0 +1,196 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sign in to Alfred Smart",
+        "description": "Use the same email and password as in the Alfred app.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        },
+        "data_description": {
+          "email": "The email of your Alfred Smart account.",
+          "password": "Stored in Home Assistant to renew the session by itself."
+        }
+      },
+      "asset": {
+        "title": "Choose your home",
+        "description": "This account has access to more than one home. Add the integration again for each of the others.",
+        "data": {
+          "asset_id": "Home"
+        }
+      },
+      "asset_manual": {
+        "title": "Home code",
+        "description": "Your home could not be discovered automatically. Open app.alfredsmart.com in a browser, enter your home and, in the developer tools (Network tab), look for a request to `/devices`: the value of `asset_id=` is the code (for example `ABCD1234EFGHI`).",
+        "data": {
+          "asset_id": "Home code (asset_id)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "Alfred Smart rejected the password of {email}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong email or password.",
+      "cannot_connect": "Could not connect to Alfred Smart.",
+      "invalid_asset": "Alfred Smart does not recognise this home code.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This home is already configured.",
+      "reauth_successful": "Session renewed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "scan_interval": "Polling interval"
+        },
+        "data_description": {
+          "scan_interval": "How often the list of accesses is read, in minutes. Opening does not depend on it."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "cloud_connection": {
+        "name": "Alfred connection"
+      }
+    },
+    "button": {
+      "open_gate": {
+        "name": "Open"
+      },
+      "open_garage": {
+        "name": "Open"
+      },
+      "open_door": {
+        "name": "Open"
+      },
+      "open_other": {
+        "name": "Open"
+      },
+      "open_common_area": {
+        "name": "Open"
+      }
+    },
+    "sensor": {
+      "last_result": {
+        "name": "Last opening",
+        "state": {
+          "ok": "Opened",
+          "gateway_unreachable": "Gateway offline",
+          "unauthorized": "Session rejected",
+          "forbidden": "Not allowed",
+          "timeout": "No answer",
+          "error": "Error"
+        },
+        "state_attributes": {
+          "last_attempt": {
+            "name": "Last attempt"
+          },
+          "http_status": {
+            "name": "HTTP status"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "open_gateway_unreachable": {
+      "message": "{name} did not open: Alfred's server cannot reach the gateway (HTTP {status}). This is not a Home Assistant problem: use your key and tell the building management."
+    },
+    "common_area_gateway_unreachable": {
+      "message": "Common area {name}: Alfred's server cannot reach the gateway (HTTP {status})."
+    },
+    "open_unauthorized": {
+      "message": "{name} did not open: Alfred rejected the session. Enter the password of the integration again."
+    },
+    "common_area_unauthorized": {
+      "message": "Common area {name}: Alfred rejected the session. Enter the password of the integration again."
+    },
+    "open_forbidden": {
+      "message": "{name} did not open: your account is not allowed to use this access (HTTP {status})."
+    },
+    "common_area_forbidden": {
+      "message": "Common area {name}: not allowed (HTTP {status}). Is there a booking in force?"
+    },
+    "open_timeout": {
+      "message": "Alfred did not answer in time when opening {name}. It may have opened anyway: check before trying again."
+    },
+    "common_area_timeout": {
+      "message": "Common area {name}: Alfred did not answer in time. The request may have gone through anyway."
+    },
+    "open_error": {
+      "message": "{name} did not open (HTTP {status})."
+    },
+    "common_area_error": {
+      "message": "Common area {name}: Alfred refused the request (HTTP {status}). The slot may be taken or outside opening hours."
+    },
+    "entry_not_found": {
+      "message": "No loaded Alfred Smart home with id {entry_id}."
+    },
+    "not_loaded": {
+      "message": "Alfred Smart is not loaded."
+    },
+    "entry_required": {
+      "message": "More than one home is configured: choose which one."
+    },
+    "sensor_uuid_required": {
+      "message": "The sensor of common area {area} is unknown: pass `sensor_uuid`."
+    },
+    "end_before_start": {
+      "message": "The end must be after the start."
+    }
+  },
+  "services": {
+    "open_common_area": {
+      "name": "Open common area",
+      "description": "Opens the door of a common area (gym, social club…). It usually needs a booking in force.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Home",
+          "description": "Only needed when more than one home is configured."
+        },
+        "common_area_id": {
+          "name": "Common area",
+          "description": "Identifier (UUID) of the common area."
+        },
+        "sensor_uuid": {
+          "name": "Sensor",
+          "description": "UUID of the door reader. When left out, the discovered one is used."
+        }
+      }
+    },
+    "book_common_area": {
+      "name": "Book common area",
+      "description": "Books a time slot in a common area.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Home",
+          "description": "Only needed when more than one home is configured."
+        },
+        "common_area_id": {
+          "name": "Common area",
+          "description": "Identifier (UUID) of the common area."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Start of the booking (Home Assistant time zone)."
+        },
+        "end": {
+          "name": "End",
+          "description": "End of the booking."
+        }
+      }
+    }
+  }
+}
