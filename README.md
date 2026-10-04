@@ -1,7 +1,7 @@
 # Alfred Smart para Home Assistant
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
-[![Validate](https://github.com/__GITHUB_USER__/ha-alfred-smart/actions/workflows/validate.yml/badge.svg)](https://github.com/__GITHUB_USER__/ha-alfred-smart/actions/workflows/validate.yml)
+[![Validate](https://github.com/mcello23/ha-alfred-smart/actions/workflows/validate.yml/badge.svg)](https://github.com/mcello23/ha-alfred-smart/actions/workflows/validate.yml)
 
 🇪🇸 Español · [🇬🇧 English](README.en.md)
 
@@ -40,11 +40,11 @@ accesos de tu cuenta.
 ### Con HACS (recomendado)
 
 1. En HACS, menú ⋮ → **Repositorios personalizados**.
-2. Añade `https://github.com/__GITHUB_USER__/ha-alfred-smart` con la categoría
+2. Añade `https://github.com/mcello23/ha-alfred-smart` con la categoría
    **Integración**.
 3. Busca **Alfred Smart**, descárgala y reinicia Home Assistant.
 
-[![Abrir en HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=__GITHUB_USER__&repository=ha-alfred-smart&category=integration)
+[![Abrir en HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=mcello23&repository=ha-alfred-smart&category=integration)
 
 ### Manual
 

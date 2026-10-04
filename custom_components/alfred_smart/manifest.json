@@ -2,13 +2,13 @@
   "domain": "alfred_smart",
   "name": "Alfred Smart",
   "codeowners": [
-    "@__GITHUB_USER__"
+    "@mcello23"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/__GITHUB_USER__/ha-alfred-smart",
+  "documentation": "https://github.com/mcello23/ha-alfred-smart",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/__GITHUB_USER__/ha-alfred-smart/issues",
+  "issue_tracker": "https://github.com/mcello23/ha-alfred-smart/issues",
   "loggers": [
     "custom_components.alfred_smart"
   ],

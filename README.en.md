@@ -29,7 +29,7 @@ with automatic discovery of every access your account can use.
 ## Installation
 
 HACS → ⋮ → **Custom repositories** → add
-`https://github.com/__GITHUB_USER__/ha-alfred-smart` as **Integration**, download
+`https://github.com/mcello23/ha-alfred-smart` as **Integration**, download
 **Alfred Smart** and restart. Then **Settings → Devices & services → Add
 integration → Alfred Smart**.
 
