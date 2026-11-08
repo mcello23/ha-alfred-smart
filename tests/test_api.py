@@ -24,8 +24,12 @@ from custom_components.alfred_smart.api import (
 from custom_components.alfred_smart.const import INTERACT_TIMEOUT
 
 # The fake server listens on localhost; the Home Assistant test plugin, when
-# installed, blocks sockets unless told otherwise.
-pytestmark = pytest.mark.enable_socket
+# installed, blocks sockets unless told otherwise. Use the fixture, not the
+# `enable_socket` marker: pytest-socket honours the marker in its own
+# pytest_runtest_setup hook, and the Home Assistant plugin disables sockets
+# again in a hook of the same name, so the marker only works when the plugins
+# happen to load in the right order. Fixtures run after both hooks.
+pytestmark = pytest.mark.usefixtures("socket_enabled")
 
 
 def make_jwt(exp: float) -> str:

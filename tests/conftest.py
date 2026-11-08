@@ -15,7 +15,16 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
+
+if importlib.util.find_spec("pytest_socket") is None:
+
+    @pytest.fixture
+    def socket_enabled() -> None:
+        """Without pytest-socket nothing blocks sockets, so there is nothing to enable."""
+
 
 if importlib.util.find_spec("homeassistant") is None:
     for name, path in (

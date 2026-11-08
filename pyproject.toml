@@ -2,7 +2,6 @@
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
-markers = ["enable_socket: allow sockets (pytest-socket)"]
 
 [tool.ruff]
 target-version = "py313"
