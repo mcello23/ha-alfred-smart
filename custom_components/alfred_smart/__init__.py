@@ -142,7 +142,7 @@ def _sync_gateway_devices(hass: HomeAssistant, entry: AlfredConfigEntry) -> None
             identifiers={gateway_identifier(asset_id, gateway.id)},
             manufacturer=MANUFACTURER,
             model=gateway.model or "Gateway",
-            name=f"Gateway {gateway.id}",
+            name=gateway.name or f"Gateway {gateway.id}",
             sw_version=gateway.firmware,
             serial_number=gateway.id,
             **via_device(coordinator.hub_device_id, (DOMAIN, asset_id)),

@@ -16,7 +16,8 @@ with automatic discovery of every access your account can use.
 - Sign in with your **email and password**; the session renews itself and
   survives restarts.
 - **Automatic discovery** of gates, garages and doors, including the ones shared
-  with the community, grouped under their gateway.
+  with the community, grouped under their gateway (named as building
+  management named it, e.g. "Portal 1 Comunidad").
 - An **Open button** per access. It fails loudly when Alfred could not open,
   instead of pretending it worked.
 - A **Last opening** sensor per access (`ok`, `gateway_unreachable`,
@@ -64,9 +65,9 @@ unavailable button would be skipped by `button.press` without a word.
 Email and password stay in the Home Assistant configuration and only go to
 `services.alfredsmartdata.com`. The session token is kept in `.storage`
 (owner-only file) so a restart does not open a new session; it is deleted with
-the integration. Diagnostics hide credentials, personal data, the ids of the
-other homes in the community and the gateway's owner, QR code and
-voice-assistant account.
+the integration. Diagnostics hide credentials, personal data (including the
+home's name, which is usually its address), the ids of the other homes in the
+community and the gateway's owner, QR code and voice-assistant account.
 
 ## Discovery script
 

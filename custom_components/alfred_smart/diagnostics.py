@@ -9,10 +9,12 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 
+from .const import CONF_ASSET_NAME
 from .coordinator import AlfredConfigEntry
 from .models import SENSITIVE_KEYS
 
-TO_REDACT = {CONF_EMAIL, CONF_PASSWORD, *SENSITIVE_KEYS}
+# The home's name is usually its street address ("Calle ..., 2º A").
+TO_REDACT = {CONF_EMAIL, CONF_PASSWORD, CONF_ASSET_NAME, *SENSITIVE_KEYS}
 
 
 async def async_get_config_entry_diagnostics(

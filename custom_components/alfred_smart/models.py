@@ -125,6 +125,9 @@ class GatewayInfo:
     id: str
     firmware: str | None
     model: str | None
+    # What building management called it ("Portal 1 Comunidad"); the id is
+    # all a resident would otherwise see.
+    name: str | None = None
     raw: dict[str, Any] = field(default_factory=dict, compare=False, repr=False)
 
 
@@ -280,10 +283,12 @@ def parse_gateway(gateway_id: str, payload: Any) -> GatewayInfo:
     firmware = _get(item, "firmware_version", "firmware", "fw_version", "version", "sw_version")
     # Not `type`: on the live API that is the sharing mode ("shared").
     model = _get(item, "model", "sku", "hw_version", "hardware_version")
+    name = _get(item, "description", "name", "alias")
     return GatewayInfo(
         id=gateway_id,
         firmware=str(firmware) if firmware is not None else None,
         model=str(model) if model is not None else None,
+        name=(str(name).strip() or None) if name is not None else None,
         raw=item,
     )
 

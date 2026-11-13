@@ -24,7 +24,8 @@ accesos de tu cuenta.
   tokens a mano ni programar renovaciones.
 - **Descubrimiento automático** de todos los accesos de tu vivienda, incluidos
   los compartidos con la comunidad: portales, garajes, puertas de piscina…
-- **Un botón «Abrir» por acceso**, agrupado en dispositivos con su gateway.
+- **Un botón «Abrir» por acceso**, agrupado en dispositivos con su gateway,
+  que lleva el nombre que le dio la administración (p. ej. «Portal 1 Comunidad»).
 - **Errores que se ven**: si Alfred no consigue abrir, el botón falla con un
   mensaje claro en lugar de fingir que ha ido bien.
 - **Sensor «Última apertura»** por acceso, para saber si la última vez funcionó
@@ -225,9 +226,10 @@ El correo y la contraseña se guardan en la configuración de Home Assistant
 (archivo legible solo por el propietario) para no abrir una sesión nueva en
 cada reinicio; se borra al eliminar la integración y nunca entra en el
 historial. El diagnóstico censura correo, contraseña, token, direcciones y
-teléfonos, y también lo que identifica a terceros: los códigos de las demás
-viviendas de la comunidad y el propietario, el código QR y la cuenta de
-asistente de voz del gateway.
+teléfonos (también el nombre de la vivienda, que suele ser la dirección), y
+lo que identifica a terceros: los códigos de las demás viviendas de la
+comunidad y el propietario, el código QR y la cuenta de asistente de voz del
+gateway.
 
 ## Contribuir
 

@@ -199,6 +199,13 @@ def test_parse_gateway_model_is_the_sku_not_the_sharing_type() -> None:
     assert parse_gateway("gw", live).model == "AM-GZ80X"
 
 
+def test_parse_gateway_name_is_the_description() -> None:
+    live = {"data": {"description": "Portal 1 Comunidad", "sku": "AM-GZ80X"}}
+    assert parse_gateway("gw", live).name == "Portal 1 Comunidad"
+    assert parse_gateway("gw", {"data": {"description": "  "}}).name is None
+    assert parse_gateway("gw", {"data": {}}).name is None
+
+
 def test_sensitive_keys_cover_the_live_payloads() -> None:
     # Ids of every other home in the community, and the gateway's owner,
     # pairing code and voice-assistant account.

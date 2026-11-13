@@ -94,7 +94,14 @@ def mock_alfred(aioclient_mock: AiohttpClientMocker) -> None:
     aioclient_mock.get(f"{BASE}/devices", json=DEVICES)
     aioclient_mock.get(
         f"{BASE}/gateways/gwok",
-        json={"data": {"firmware_version": "3.35.0", "sku": "AM-GZ80X", "type": "shared"}},
+        json={
+            "data": {
+                "firmware_version": "3.35.0",
+                "sku": "AM-GZ80X",
+                "type": "shared",
+                "description": "Portal 3 Comunidad",
+            }
+        },
     )
     aioclient_mock.get(
         f"{BASE}/gateways/gwdead",
@@ -184,6 +191,9 @@ async def test_entities_and_opening(
         (DOMAIN, "HOME1_gw_gwok"), entry.entry_id
     )
     assert other is not None and other.model == "AM-GZ80X"
+    # Named as building management named it; the id only when Alfred gives no name.
+    assert other.name == "Portal 3 Comunidad"
+    assert gateway.name == "Gateway gwdead"
 
     await hass.services.async_call("button", "press", {"entity_id": portal}, blocking=True)
     assert (
@@ -473,5 +483,7 @@ async def test_diagnostics_are_redacted(
     # The other homes of the community and the gateway's owner and pairing data.
     for leak in ("NEIGHBOUR1", "owner-user-id", "PAIRING-QR", "voice@example.com"):
         assert leak not in text
+    # The home's name is usually its street address.
+    assert diag["entry"]["asset_name"] == "**REDACTED**"
     assert len(diag["parsed"]["devices"]) == 3
     assert diag["raw"]["devices"]["data"][0]["sensors"][0]["name"] == "Portal 3"
