@@ -13,7 +13,8 @@ with automatic discovery of every access your account can use.
 
 ## Features
 
-- Sign in with your **email and password**; the session renews itself.
+- Sign in with your **email and password**; the session renews itself and
+  survives restarts.
 - **Automatic discovery** of gates, garages and doors, including the ones shared
   with the community, grouped under their gateway.
 - An **Open button** per access. It fails loudly when Alfred could not open,
@@ -23,7 +24,11 @@ with automatic discovery of every access your account can use.
 - An **Alfred connection** diagnostic sensor that tolerates single missed polls
   (15-minute grace period).
 - **Common areas**: `alfred_smart.book_common_area` and
-  `alfred_smart.open_common_area` actions.
+  `alfred_smart.open_common_area` actions. With `response_variable` they do
+  not fail: the response carries `ok`, `result`, `status` (HTTP code of the
+  failure, e.g. 409/422 for a taken slot) and Alfred's `response`, so a script
+  can tell a taken slot from a rejected session. Without it they raise, like
+  any action.
 - UI in English, Spanish and Brazilian Portuguese.
 
 ## Installation
@@ -49,6 +54,19 @@ request to `devices`; the `asset_id=` parameter is the code.
 "Enabled" does not mean "working": a gate whose gateway is down is still listed
 as enabled, so only an opening attempt finds out. That is what the *Last
 opening* sensor is for.
+
+Buttons do not follow the polling: when the device list cannot be read they
+stay available, and a press against a real outage fails with the reason. An
+unavailable button would be skipped by `button.press` without a word.
+
+## Privacy
+
+Email and password stay in the Home Assistant configuration and only go to
+`services.alfredsmartdata.com`. The session token is kept in `.storage`
+(owner-only file) so a restart does not open a new session; it is deleted with
+the integration. Diagnostics hide credentials, personal data, the ids of the
+other homes in the community and the gateway's owner, QR code and
+voice-assistant account.
 
 ## Discovery script
 

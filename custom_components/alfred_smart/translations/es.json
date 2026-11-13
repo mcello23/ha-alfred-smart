@@ -154,7 +154,7 @@
   "services": {
     "open_common_area": {
       "name": "Abrir zona común",
-      "description": "Abre la puerta de una zona común (gimnasio, club social…). Normalmente exige una reserva en vigor.",
+      "description": "Abre la puerta de una zona común (gimnasio, club social…). Normalmente exige una reserva en vigor. Con una variable de respuesta no falla: la respuesta indica `ok`, `result` y el `status` HTTP.",
       "fields": {
         "config_entry_id": {
           "name": "Vivienda",
@@ -172,7 +172,7 @@
     },
     "book_common_area": {
       "name": "Reservar zona común",
-      "description": "Reserva una franja horaria en una zona común.",
+      "description": "Reserva una franja horaria en una zona común. Con una variable de respuesta no falla: la respuesta indica `ok`, `result` y el `status` HTTP.",
       "fields": {
         "config_entry_id": {
           "name": "Vivienda",

@@ -90,18 +90,36 @@ class FakeAlfred:
             return web.json_response({}, status=401)
         assert request.query["page[size]"] == "1000"
         asset = request.query.get("asset_id")
+        # The live shape: gateway in `gateway_uuid`, the access ids inside
+        # the first sensor.
         items = [
             {
                 "asset_id": "HOME1",
+                "device_id": 101,
                 "enabled": True,
-                "sensors": [{"name": "Portal 3"}],
-                "access_sensor_id": access_sensor_id("101", "gwok"),
+                "gateway_uuid": "gwok",
+                "sensors": [
+                    {
+                        "name": "Portal 3",
+                        "room": "Portales",
+                        "sensor_id": 0,
+                        "access_sensor_id": access_sensor_id("101", "gwok"),
+                    }
+                ],
             },
             {
                 "asset_id": "HOME1",
+                "device_id": 115,
                 "enabled": True,
-                "sensors": [{"name": "Portal 1"}],
-                "access_sensor_id": access_sensor_id("115", "gwdead"),
+                "gateway_uuid": "gwdead",
+                "sensors": [
+                    {
+                        "name": "Portal 1",
+                        "room": "Portales",
+                        "sensor_id": 0,
+                        "access_sensor_id": access_sensor_id("115", "gwdead"),
+                    }
+                ],
             },
         ]
         if asset not in (None, "HOME1"):
@@ -191,6 +209,61 @@ class ClientTest(unittest.IsolatedAsyncioTestCase):
         await self.client.login()
         await self.client.get_devices("HOME1")
         assert self.fake.logins == 2
+
+    async def test_saved_session_is_reused_without_logging_in(self) -> None:
+        saved: list[str] = []
+        first = AlfredSmartClient(
+            self.session,
+            "me@example.com",
+            "secret",
+            base_url=str(self.server.make_url("")),
+            on_login=saved.append,
+        )
+        await first.ensure_session()
+        assert self.fake.logins == 1 and len(saved) == 1
+
+        # A restart: a new client with the saved token does not log in again.
+        resumed = AlfredSmartClient(
+            self.session,
+            "me@example.com",
+            "secret",
+            base_url=str(self.server.make_url("")),
+            token=saved[0],
+            on_login=saved.append,
+        )
+        await resumed.ensure_session()
+        assert {d.name for d in await resumed.get_devices("HOME1")} == {"Portal 1", "Portal 3"}
+        assert self.fake.logins == 1 and len(saved) == 1
+        assert resumed.token_expiry is not None
+
+    async def test_rejected_saved_session_logs_in_and_reports_the_new_one(self) -> None:
+        saved: list[str] = []
+        stale = make_jwt(time.time() + 3600)  # valid-looking, unknown to the server
+        client = AlfredSmartClient(
+            self.session,
+            "me@example.com",
+            "secret",
+            base_url=str(self.server.make_url("")),
+            token=stale,
+            on_login=saved.append,
+        )
+        await client.open_device("gwok", "101")
+        assert self.fake.logins == 1
+        assert len(saved) == 1 and saved[0] != stale
+        assert len(self.fake.interactions) == 1
+
+    async def test_saved_session_close_to_expiry_is_renewed(self) -> None:
+        saved: list[str] = []
+        client = AlfredSmartClient(
+            self.session,
+            "me@example.com",
+            "secret",
+            base_url=str(self.server.make_url("")),
+            token=make_jwt(time.time() + 60),
+            on_login=saved.append,
+        )
+        await client.ensure_session()
+        assert self.fake.logins == 1 and len(saved) == 1
 
     async def test_concurrent_requests_share_one_login(self) -> None:
         await asyncio.gather(*(self.client.get_devices("HOME1") for _ in range(5)))

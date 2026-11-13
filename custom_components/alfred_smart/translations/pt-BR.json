@@ -154,7 +154,7 @@
   "services": {
     "open_common_area": {
       "name": "Abrir área comum",
-      "description": "Abre a porta de uma área comum (academia, salão de festas…). Normalmente exige uma reserva valendo.",
+      "description": "Abre a porta de uma área comum (academia, salão de festas…). Normalmente exige uma reserva valendo. Com variável de resposta não falha: a resposta traz `ok`, `result` e o `status` HTTP.",
       "fields": {
         "config_entry_id": {
           "name": "Imóvel",
@@ -172,7 +172,7 @@
     },
     "book_common_area": {
       "name": "Reservar área comum",
-      "description": "Reserva um horário numa área comum.",
+      "description": "Reserva um horário numa área comum. Com variável de resposta não falha: a resposta traz `ok`, `result` e o `status` HTTP.",
       "fields": {
         "config_entry_id": {
           "name": "Imóvel",

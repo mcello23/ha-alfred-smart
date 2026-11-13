@@ -154,7 +154,7 @@
   "services": {
     "open_common_area": {
       "name": "Open common area",
-      "description": "Opens the door of a common area (gym, social club…). It usually needs a booking in force.",
+      "description": "Opens the door of a common area (gym, social club…). It usually needs a booking in force. Called with a response variable it does not fail: the response says `ok`, `result` and the HTTP `status`.",
       "fields": {
         "config_entry_id": {
           "name": "Home",
@@ -172,7 +172,7 @@
     },
     "book_common_area": {
       "name": "Book common area",
-      "description": "Books a time slot in a common area.",
+      "description": "Books a time slot in a common area. Called with a response variable it does not fail: the response says `ok`, `result` and the HTTP `status`.",
       "fields": {
         "config_entry_id": {
           "name": "Home",

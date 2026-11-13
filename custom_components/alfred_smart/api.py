@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -102,13 +103,21 @@ class AlfredSmartClient:
         password: str,
         *,
         base_url: str = API_BASE,
+        token: str | None = None,
+        on_login: Callable[[str], None] | None = None,
     ) -> None:
+        """`token` resumes a saved session; `on_login` hears every new one.
+
+        Together they let the caller keep the session across restarts instead
+        of logging in each time Home Assistant starts.
+        """
         self._session = session
         self._email = email
         self._password = password
         self._base_url = base_url.rstrip("/")
-        self._token: str | None = None
-        self._token_expiry: datetime | None = None
+        self._token: str | None = token or None
+        self._token_expiry: datetime | None = jwt_expiry(token) if token else None
+        self._on_login = on_login
         self._login_lock = asyncio.Lock()
 
     @property
@@ -141,6 +150,15 @@ class AlfredSmartClient:
         self._token = token
         self._token_expiry = jwt_expiry(token)
         _LOGGER.debug("Logged in, token valid until %s", self._token_expiry)
+        if self._on_login is not None:
+            self._on_login(token)
+
+    async def ensure_session(self) -> None:
+        """Keep the current session while it lasts; log in only when needed.
+
+        Raises AlfredAuthError on bad credentials, like `login`.
+        """
+        await self._ensure_token()
 
     async def _ensure_token(self, stale_token: str | None = None) -> None:
         async with self._login_lock:

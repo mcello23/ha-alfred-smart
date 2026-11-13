@@ -61,32 +61,8 @@ DEVICE_PARAMS = {
     "include_shared": "1",
     "show_visible": "1",
 }
-REDACT = {
-    "email",
-    "password",
-    "token",
-    "access_token",
-    "refresh_token",
-    "address",
-    "street",
-    "phone",
-    "mobile",
-    "first_name",
-    "last_name",
-    "full_name",
-    "user_email",
-    "latitude",
-    "longitude",
-    "lat",
-    "lng",
-    "serial",
-    "serial_number",
-    "mac",
-    "mac_address",
-    "ip",
-    "pin",
-    "code",
-}
+# The same keys the integration's diagnostics hide.
+REDACT = models.SENSITIVE_KEYS
 
 
 def call(

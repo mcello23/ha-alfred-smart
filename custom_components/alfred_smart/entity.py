@@ -85,9 +85,17 @@ class AlfredAccessEntity(CoordinatorEntity[AlfredCoordinator]):
 
     @property
     def available(self) -> bool:
-        """Unavailable when the cloud is down or the building disabled it."""
+        """Usable while Alfred lists it as enabled, whatever the last poll did.
+
+        Not tied to the coordinator: a failed read of the device list does not
+        mean the gate would not open (it is a different request), and
+        `button.press` silently skips an unavailable button, so the gate would
+        stay shut with nothing said. When Alfred is really down, the press
+        fails with an error instead, and that error is what the user needs.
+        The cloud itself is reported by the connection binary sensor.
+        """
         device = self.device
-        return super().available and device is not None and device.enabled
+        return device is not None and device.enabled
 
 
 class AlfredCommonAreaEntity(CoordinatorEntity[AlfredCoordinator]):
@@ -115,6 +123,6 @@ class AlfredCommonAreaEntity(CoordinatorEntity[AlfredCoordinator]):
 
     @property
     def available(self) -> bool:
-        """Unavailable once the area disappears from the listing."""
+        """Usable while the area is listed with a reader (see AlfredAccessEntity)."""
         area = self.area
-        return super().available and area is not None and area.sensor_uuid is not None
+        return area is not None and area.sensor_uuid is not None

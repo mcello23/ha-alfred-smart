@@ -8,6 +8,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
 from .api import AlfredAuthError, AlfredSmartClient, AlfredSmartError
@@ -25,6 +26,18 @@ PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.S
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
+SESSION_STORAGE_VERSION = 1
+
+
+def _session_store(hass: HomeAssistant, entry: AlfredConfigEntry) -> Store[dict[str, str]]:
+    """Where the session token survives restarts (`.storage`, owner-only file).
+
+    Logging in on every start would open a new session on Alfred's side each
+    time Home Assistant restarts; the JWT lasts weeks, so it is reused until
+    it is about to expire or Alfred rejects it.
+    """
+    return Store(hass, SESSION_STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}", private=True)
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the integration-wide services."""
@@ -33,12 +46,24 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: AlfredConfigEntry) -> bool:
-    """Log in, read the home once and create the entities."""
+    """Resume (or open) the session, read the home once and create the entities."""
+    store = _session_store(hass, entry)
+    saved = await store.async_load()
+    token = saved.get("token") if isinstance(saved, dict) else None
+
+    @callback
+    def _save_session(new_token: str) -> None:
+        entry.async_create_task(hass, store.async_save({"token": new_token}))
+
     client = AlfredSmartClient(
-        async_get_clientsession(hass), entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD]
+        async_get_clientsession(hass),
+        entry.data[CONF_EMAIL],
+        entry.data[CONF_PASSWORD],
+        token=token,
+        on_login=_save_session,
     )
     try:
-        await client.login()
+        await client.ensure_session()
     except AlfredAuthError as err:
         raise ConfigEntryAuthFailed(str(err)) from err
     except AlfredSmartError as err:
@@ -62,6 +87,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: AlfredConfigEntry) -> bo
 async def async_unload_entry(hass: HomeAssistant, entry: AlfredConfigEntry) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: AlfredConfigEntry) -> None:
+    """Forget the saved session together with the entry."""
+    await _session_store(hass, entry).async_remove()
 
 
 async def _async_reload_on_options(hass: HomeAssistant, entry: AlfredConfigEntry) -> None:

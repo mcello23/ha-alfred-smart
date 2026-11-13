@@ -20,8 +20,8 @@ accesos de tu cuenta.
 ## Qué hace
 
 - **Inicio de sesión con tu correo y contraseña**, igual que en la app. La
-  sesión se renueva sola: no hace falta copiar tokens a mano ni programar
-  renovaciones.
+  sesión se renueva sola y sobrevive a los reinicios: no hace falta copiar
+  tokens a mano ni programar renovaciones.
 - **Descubrimiento automático** de todos los accesos de tu vivienda, incluidos
   los compartidos con la comunidad: portales, garajes, puertas de piscina…
 - **Un botón «Abrir» por acceso**, agrupado en dispositivos con su gateway.
@@ -32,7 +32,9 @@ accesos de tu cuenta.
 - **Conexión con Alfred** como sensor binario de diagnóstico, tolerante a los
   cortes de un solo ciclo.
 - **Zonas comunes**: servicios para reservar una franja y abrir la puerta del
-  gimnasio, la sala comunitaria, etc.
+  gimnasio, la sala comunitaria, etc. Con `response_variable` devuelven el
+  resultado (`ok`, `status`) en lugar de fallar, para que un script distinga
+  «franja ocupada» de «sesión rechazada».
 - Interfaz en **español, inglés y portugués (Brasil)**.
 
 ## Instalación
@@ -70,11 +72,15 @@ Alfred en el momento.
 
 | Entidad | Tipo | Qué es |
 | --- | --- | --- |
-| `button.<acceso>_abrir` | Botón | Abre el portal, garaje o puerta. El icono depende del tipo, que se deduce del nombre. |
+| `button.<acceso>_abrir` | Botón | Abre el portal, garaje o puerta. El icono depende del tipo, que se deduce del nombre y de la estancia que indica Alfred (una «Entrada Int» en la estancia «Garaje» es un garaje). |
 | `sensor.<acceso>_ultima_apertura` | Enum | `ok`, `gateway_unreachable`, `unauthorized`, `forbidden`, `timeout` o `error`. Atributos: `last_attempt` y `http_status`. |
 | `binary_sensor.<vivienda>_conexion_con_alfred` | Conectividad | Si la nube de Alfred responde. Diagnóstico. |
 
 Los accesos que Alfred marca como desactivados aparecen como no disponibles.
+Fuera de eso, los botones **no dependen del último sondeo**: si la lista de
+accesos no se pudo leer, el botón sigue disponible, y si Alfred está caído de
+verdad, falla al pulsarlo con el motivo. Un botón no disponible lo ignoraría
+`button.press` sin avisar, y el portal se quedaría cerrado en silencio.
 Si la administración añade un acceso nuevo, aparece solo en el siguiente
 ciclo; si lo quita, puedes borrar el dispositivo desde su página.
 
@@ -97,6 +103,27 @@ data:
   end: "2026-10-05 07:30:00"
 response_variable: reserva
 ```
+
+**Con `response_variable` el servicio no falla**: la respuesta dice qué pasó y
+el script decide.
+
+| Campo | Qué es |
+| --- | --- |
+| `ok` | `true` si Alfred aceptó. |
+| `result` | `ok`, `gateway_unreachable`, `unauthorized`, `forbidden`, `timeout` o `error` (los mismos valores que el sensor «Última apertura»). |
+| `status` | Código HTTP del fallo (`409`/`422` suele ser franja ocupada). `null` si fue bien o si Alfred no contestó. |
+| `response` | La respuesta de Alfred, tal cual. |
+
+```yaml
+- if: "{{ not reserva.ok and reserva.status in [409, 422] }}"
+  then:
+    - action: notify.notify
+      data:
+        message: Esa franja ya está ocupada.
+```
+
+Sin `response_variable` (un botón del panel, por ejemplo) falla con el error
+traducido, como cualquier acción.
 
 ### `alfred_smart.open_common_area`
 
@@ -148,8 +175,9 @@ puede saberlo hasta que intentas abrir. Por eso existe el sensor
 
 **Un sondeo perdido no es una caída.** La nube de Alfred falla de vez en cuando
 una petición suelta. La integración conserva los últimos datos durante 15
-minutos antes de dar las entidades por no disponibles, para no generar falsas
-alarmas.
+minutos antes de marcar la conexión como caída, para no generar falsas
+alarmas. Los botones siguen disponibles incluso después: leer la lista y abrir
+son peticiones distintas.
 
 ## Cómo encontrar el código de la vivienda
 
@@ -184,17 +212,22 @@ incidencia: es la forma de mejorar el descubrimiento para todos.
 - No hay estado de las puertas (abierta/cerrada), solo el impulso de apertura.
 - Los gateways no se pueden reiniciar: como residente, la API solo permite
   leerlos.
-- El listado automático de zonas comunes aún no está confirmado en todos los
-  edificios. Si tu zona no aparece, los servicios funcionan igualmente con su
-  identificador.
+- El listado automático de zonas comunes no está confirmado: en el edificio
+  donde se probó responde 503 siempre. Tras tres fallos seguidos (o un 404) la
+  integración deja de preguntar hasta que se recarga. Los servicios funcionan
+  igualmente con el identificador de la zona.
 
 ## Privacidad
 
 El correo y la contraseña se guardan en la configuración de Home Assistant
 (igual que en cualquier integración en la nube) y solo se envían a
-`services.alfredsmartdata.com`. El token de sesión vive en memoria y no se
-guarda en el historial. El diagnóstico censura correo, contraseña, token,
-direcciones y teléfonos.
+`services.alfredsmartdata.com`. El token de sesión se guarda en `.storage`
+(archivo legible solo por el propietario) para no abrir una sesión nueva en
+cada reinicio; se borra al eliminar la integración y nunca entra en el
+historial. El diagnóstico censura correo, contraseña, token, direcciones y
+teléfonos, y también lo que identifica a terceros: los códigos de las demás
+viviendas de la comunidad y el propietario, el código QR y la cuenta de
+asistente de voz del gateway.
 
 ## Contribuir
 

@@ -7,6 +7,7 @@ import json
 from datetime import UTC, datetime
 
 from custom_components.alfred_smart.models import (
+    SENSITIVE_KEYS,
     DeviceKind,
     assets_from_devices,
     decode_access_sensor_id,
@@ -22,6 +23,37 @@ from custom_components.alfred_smart.models import (
 
 def access_sensor_id(device: str, gateway: str, sensor: str = "0") -> str:
     return base64.b64encode(f"{sensor}######{device}######{gateway}".encode()).decode()
+
+
+def live_item(name: str, room: str, gateway: str, device: int, **extra) -> dict:
+    """One `GET /devices` entry as the live API sends it (fake ids).
+
+    The gateway is `gateway_uuid`, and `access_sensor_id` / `sensor_id` live
+    in the first sensor, not on the item.
+    """
+    return {
+        "asset_id": "HOME1",
+        "device_id": device,
+        "device_name": f"ALFRED_DUMMYComm{device}: Dummy Switch",
+        "device_type": "DUMMY_SWITCH",
+        "enabled": True,
+        "gateway_uuid": gateway,
+        "shared": True,
+        "sensors": [
+            {
+                "access_sensor_id": access_sensor_id(str(device), gateway),
+                "device_id": device,
+                "name": name,
+                "room": room,
+                "sensor_id": 0,
+                "sensor_type": "SWITCH",
+                "shared_with_asset_list": ["OTHERHOME1", "OTHERHOME2"],
+                "usage": "CommunityDoor",
+                "visible": True,
+            }
+        ],
+        **extra,
+    }
 
 
 def make_jwt(exp: int) -> str:
@@ -77,6 +109,38 @@ def test_parse_devices_flat_payload() -> None:
     assert devices[0].key == "gwA_101"
 
 
+def test_parse_devices_live_payload() -> None:
+    payload = {
+        "data": [
+            live_item("Entrada Int", "Garaje", "gwgarage", 102),
+            live_item("Cancela P5", "Exteriores", "gwp5", 103),
+            live_item("Principal", "Comunidad", "gwp1", 115),
+            live_item("Entrada P3", "Piscina", "gwpool", 101, enabled=False),
+        ],
+        "meta": {"results": 4},
+    }
+    devices = parse_devices(payload)
+    assert [
+        (d.name, d.gateway_id, d.device_id, d.sensor_id, d.kind, d.enabled) for d in devices
+    ] == [
+        ("Entrada Int", "gwgarage", "102", "0", DeviceKind.GARAGE, True),
+        ("Cancela P5", "gwp5", "103", "0", DeviceKind.GATE, True),
+        ("Principal", "gwp1", "115", "0", DeviceKind.OTHER, True),
+        ("Entrada P3", "gwpool", "101", "0", DeviceKind.DOOR, False),
+    ]
+
+
+def test_parse_devices_gateway_only_in_access_sensor_id() -> None:
+    item = live_item("Portal 3", "Portales", "gwfromsensor", 102)
+    del item["gateway_uuid"]
+    (device,) = parse_devices({"data": [item]})
+    assert (device.gateway_id, device.device_id, device.kind) == (
+        "gwfromsensor",
+        "102",
+        DeviceKind.GATE,
+    )
+
+
 def test_parse_devices_explicit_ids_and_jsonapi() -> None:
     payload = {
         "data": [
@@ -105,6 +169,17 @@ def test_guess_kind() -> None:
     assert guess_kind("Ascensor") is DeviceKind.OTHER
 
 
+def test_guess_kind_uses_the_room() -> None:
+    # Garage doors named after the way they open; only the room says garage.
+    assert guess_kind("Salida Ext", "Garaje") is DeviceKind.GARAGE
+    assert guess_kind("Entrada Int", "Garaje") is DeviceKind.GARAGE
+    # The name decides first; the room only fills in.
+    assert guess_kind("Entrada P5", "Piscina") is DeviceKind.DOOR
+    assert guess_kind("Portal 9-P.2", "Portales") is DeviceKind.GATE
+    assert guess_kind("Principal", "Portales") is DeviceKind.GATE
+    assert guess_kind("Principal", "Comunidad") is DeviceKind.OTHER
+
+
 def test_assets() -> None:
     assert [(a.id, a.name) for a in parse_assets({"data": [{"id": "A1", "name": "Casa"}]})] == [
         ("A1", "Casa")
@@ -117,6 +192,27 @@ def test_parse_gateway() -> None:
     info = parse_gateway("gw", {"data": {"firmware_version": "3.35.0", "is_rebootable": True}})
     assert (info.id, info.firmware) == ("gw", "3.35.0")
     assert parse_gateway("gw", "oops").firmware is None
+
+
+def test_parse_gateway_model_is_the_sku_not_the_sharing_type() -> None:
+    live = {"data": {"firmware_version": "3.34.0", "sku": "AM-GZ80X", "type": "shared"}}
+    assert parse_gateway("gw", live).model == "AM-GZ80X"
+
+
+def test_sensitive_keys_cover_the_live_payloads() -> None:
+    # Ids of every other home in the community, and the gateway's owner,
+    # pairing code and voice-assistant account.
+    assert {
+        "shared_with_asset_list",
+        "master_user",
+        "qr_code",
+        "voice_assistant_user",
+        "assistant_cloud",
+        "project_alias",
+        "email",
+        "password",
+        "token",
+    } <= SENSITIVE_KEYS
 
 
 def test_parse_common_areas() -> None:

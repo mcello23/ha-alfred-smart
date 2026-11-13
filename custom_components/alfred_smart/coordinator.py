@@ -24,6 +24,7 @@ from .api import (
     AlfredTimeoutError,
 )
 from .const import (
+    COMMON_AREAS_MAX_FAILURES,
     CONF_ASSET_ID,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
@@ -114,8 +115,10 @@ class AlfredCoordinator(DataUpdateCoordinator[AlfredData]):
         self.hub_device_id: str | None = None
         self.gateway_device_ids: dict[str, str] = {}
         self._slow_refreshed_at: datetime | None = None
-        # Unconfirmed endpoint: stop asking once it says it does not exist.
+        # Unconfirmed endpoint: stop asking once it says it does not exist,
+        # or after COMMON_AREAS_MAX_FAILURES failures in a row.
         self._common_areas_supported = True
+        self._common_areas_failures = 0
 
     async def _async_update_data(self) -> AlfredData:
         try:
@@ -180,16 +183,30 @@ class AlfredCoordinator(DataUpdateCoordinator[AlfredData]):
             return
         try:
             raw = await self.client.get_common_areas_raw(self.asset_id)
-        except AlfredNotFoundError:
-            _LOGGER.debug("No common-area listing for this account")
-            self._common_areas_supported = False
+        except AlfredNotFoundError as err:
+            self._stop_listing_common_areas(err)
             return
         except AlfredSmartError as err:
-            _LOGGER.debug("Could not list common areas: %s", err)
+            self._common_areas_failures += 1
+            if self._common_areas_failures >= COMMON_AREAS_MAX_FAILURES:
+                self._stop_listing_common_areas(err)
+            else:
+                _LOGGER.debug("Could not list common areas: %s", err)
             return
 
+        self._common_areas_failures = 0
         data.raw_common_areas = raw
         data.common_areas = {area.id: area for area in parse_common_areas(raw)}
+
+    def _stop_listing_common_areas(self, err: AlfredSmartError) -> None:
+        self._common_areas_supported = False
+        _LOGGER.info(
+            "Alfred Smart does not list the common areas of %s (%s); not asking again "
+            "until the integration reloads. The book and open actions still work "
+            "with the area id",
+            self.asset_id,
+            err,
+        )
 
     def record_attempt(self, key: str, err: Exception | None) -> None:
         """Remember the outcome of an opening and refresh the sensors."""

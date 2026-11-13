@@ -1,7 +1,14 @@
-"""Services: book and open common areas (gym, social club...)."""
+"""Services: book and open common areas (gym, social club...).
+
+Called with `response_variable`, an API failure is not raised: the response
+says what happened (`ok`, `result`, `status`) so a script can tell "slot
+taken" (409/422) from "session rejected" (401). Called without it, the
+action fails with a translated error, which is what a dashboard button wants.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Awaitable
 from datetime import datetime
 from typing import Any
 
@@ -18,7 +25,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util import dt as dt_util
 
-from .api import AlfredSmartError
+from .api import AlfredAuthError, AlfredRequestError, AlfredSmartError
 from .const import (
     ATTR_COMMON_AREA_ID,
     ATTR_CONFIG_ENTRY_ID,
@@ -29,7 +36,7 @@ from .const import (
     SERVICE_BOOK_COMMON_AREA,
     SERVICE_OPEN_COMMON_AREA,
 )
-from .coordinator import AlfredConfigEntry, AlfredCoordinator, classify_error
+from .coordinator import AlfredConfigEntry, AlfredCoordinator, OpenResult, classify_error
 
 _BASE_SCHEMA = {
     vol.Optional(ATTR_CONFIG_ENTRY_ID): cv.string,
@@ -84,8 +91,36 @@ def _api_error(err: AlfredSmartError, area_id: str) -> HomeAssistantError:
     )
 
 
-def _as_response(body: Any) -> ServiceResponse:
-    return body if isinstance(body, dict) else {"response": body}
+def _outcome(body: Any = None, err: AlfredSmartError | None = None) -> ServiceResponse:
+    """`ok`, `result` (as in the last-opening sensor), `status` and Alfred's reply.
+
+    `status` is the HTTP code of a failure; None when it worked or when Alfred
+    did not answer at all (`result: timeout`).
+    """
+    if err is None:
+        return {"ok": True, "result": OpenResult.OK.value, "status": None, "response": body}
+    result, status = classify_error(err)
+    reply = err.body if isinstance(err, AlfredRequestError) else None
+    return {"ok": False, "result": result.value, "status": status, "response": reply}
+
+
+async def _call(
+    hass: HomeAssistant,
+    call: ServiceCall,
+    coordinator: AlfredCoordinator,
+    area_id: str,
+    request: Awaitable[Any],
+) -> ServiceResponse:
+    """Run one API call and answer the way the caller asked for."""
+    try:
+        body = await request
+    except AlfredSmartError as err:
+        if isinstance(err, AlfredAuthError):
+            coordinator.config_entry.async_start_reauth(hass)
+        if call.return_response:
+            return _outcome(err=err)
+        raise _api_error(err, area_id) from err
+    return _outcome(body) if call.return_response else None
 
 
 @callback
@@ -105,11 +140,13 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 translation_key="sensor_uuid_required",
                 translation_placeholders={"area": area_id},
             )
-        try:
-            body = await coordinator.client.open_common_area(area_id, sensor_uuid)
-        except AlfredSmartError as err:
-            raise _api_error(err, area_id) from err
-        return _as_response(body) if call.return_response else None
+        return await _call(
+            hass,
+            call,
+            coordinator,
+            area_id,
+            coordinator.client.open_common_area(area_id, sensor_uuid),
+        )
 
     async def _book(call: ServiceCall) -> ServiceResponse:
         coordinator = _coordinator(hass, call)
@@ -120,11 +157,13 @@ def async_setup_services(hass: HomeAssistant) -> None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="end_before_start"
             )
-        try:
-            body = await coordinator.client.book_common_area(area_id, start, end)
-        except AlfredSmartError as err:
-            raise _api_error(err, area_id) from err
-        return _as_response(body) if call.return_response else None
+        return await _call(
+            hass,
+            call,
+            coordinator,
+            area_id,
+            coordinator.client.book_common_area(area_id, start, end),
+        )
 
     hass.services.async_register(
         DOMAIN,

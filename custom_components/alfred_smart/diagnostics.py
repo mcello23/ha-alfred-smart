@@ -10,33 +10,9 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 
 from .coordinator import AlfredConfigEntry
+from .models import SENSITIVE_KEYS
 
-TO_REDACT = {
-    CONF_EMAIL,
-    CONF_PASSWORD,
-    "token",
-    "access_token",
-    "refresh_token",
-    "address",
-    "street",
-    "phone",
-    "mobile",
-    "first_name",
-    "last_name",
-    "full_name",
-    "user_email",
-    "latitude",
-    "longitude",
-    "lat",
-    "lng",
-    "serial",
-    "serial_number",
-    "mac",
-    "mac_address",
-    "ip",
-    "pin",
-    "code",
-}
+TO_REDACT = {CONF_EMAIL, CONF_PASSWORD, *SENSITIVE_KEYS}
 
 
 async def async_get_config_entry_diagnostics(

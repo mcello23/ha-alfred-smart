@@ -27,12 +27,18 @@ class DeviceKind(StrEnum):
     OTHER = "other"
 
 
-# Checked in order: a "Puerta garaje" is a garage, not a door.
+# A garage word in the name or in the room wins: buildings name their garage
+# doors "Entrada Int" or "Salida Ext", and only the room ("Garaje") tells.
+_GARAGE_WORDS: tuple[str, ...] = (
+    "garaje",
+    "garatge",
+    "garage",
+    "garagem",
+    "parking",
+    "aparcamiento",
+)
+# Then checked in order, in the name first and in the room after.
 _KIND_KEYWORDS: tuple[tuple[DeviceKind, tuple[str, ...]], ...] = (
-    (
-        DeviceKind.GARAGE,
-        ("garaje", "garatge", "garage", "garagem", "parking", "aparcamiento"),
-    ),
     (
         DeviceKind.GATE,
         ("portal", "porton", "portón", "cancela", "verja", "barrera", "gate"),
@@ -41,6 +47,48 @@ _KIND_KEYWORDS: tuple[tuple[DeviceKind, tuple[str, ...]], ...] = (
         DeviceKind.DOOR,
         ("puerta", "porta", "door", "acceso", "entrada", "piscina", "gimnasio"),
     ),
+)
+
+# Never shown in diagnostics or in the discovery dump. Besides credentials and
+# personal data: `shared_with_asset_list` carries the id of every home in the
+# community (over a hundred in a real building), and the gateway answer has
+# its owner (`master_user`), pairing code and voice-assistant account.
+SENSITIVE_KEYS: frozenset[str] = frozenset(
+    {
+        "email",
+        "password",
+        "token",
+        "access_token",
+        "refresh_token",
+        "address",
+        "street",
+        "phone",
+        "mobile",
+        "first_name",
+        "last_name",
+        "full_name",
+        "user_email",
+        "latitude",
+        "longitude",
+        "lat",
+        "lng",
+        "serial",
+        "serial_number",
+        "mac",
+        "mac_address",
+        "ip",
+        "pin",
+        "code",
+        "qr_code",
+        "master_user",
+        "voice_assistant_user",
+        "assistant_cloud",
+        "dns_url",
+        "management_links",
+        "project_alias",
+        "shared_with_asset_list",
+        "assets",
+    }
 )
 
 
@@ -130,43 +178,61 @@ def decode_access_sensor_id(value: Any) -> tuple[str, str, str] | None:
     return None
 
 
-def guess_kind(name: str) -> DeviceKind:
-    """Garage, gate or door, from words in the name (es/ca/en/pt)."""
-    lowered = name.casefold()
-    for kind, words in _KIND_KEYWORDS:
-        if any(word in lowered for word in words):
-            return kind
+def guess_kind(name: str, room: str | None = None) -> DeviceKind:
+    """Garage, gate or door, from words in the name and room (es/ca/en/pt)."""
+    texts = (name.casefold(), (room or "").casefold())
+    if any(word in text for text in texts for word in _GARAGE_WORDS):
+        return DeviceKind.GARAGE
+    for text in texts:
+        for kind, words in _KIND_KEYWORDS:
+            if any(word in text for word in words):
+                return kind
     return DeviceKind.OTHER
 
 
+def _first_sensor(item: dict[str, Any]) -> dict[str, Any]:
+    sensors = _get(item, "sensors")
+    if isinstance(sensors, list) and sensors and isinstance(sensors[0], dict):
+        return sensors[0]
+    return {}
+
+
 def parse_device(item: dict[str, Any]) -> AccessDevice | None:
-    """One entry of `GET /devices`, or None when it cannot be opened."""
-    decoded = decode_access_sensor_id(_get(item, "access_sensor_id"))
-    gateway_id = _get(item, "gateway_id")
+    """One entry of `GET /devices`, or None when it cannot be opened.
+
+    The live API (checked on a real account, 2026-11) names the gateway
+    `gateway_uuid` and keeps `access_sensor_id` and `sensor_id` inside the
+    first sensor, not on the item. The item-level spellings are still read,
+    in case another building answers in that shape.
+    """
+    sensor = _first_sensor(item)
+    decoded = decode_access_sensor_id(
+        _get(item, "access_sensor_id") or _get(sensor, "access_sensor_id")
+    )
+    gateway_id = _get(item, "gateway_id", "gateway_uuid")
     device_id = _get(item, "device_id")
-    sensor_id = "0"
+    if device_id is None:
+        device_id = _get(sensor, "device_id")
+    sensor_id = _get(sensor, "sensor_id")
     if decoded is not None:
         sensor_id = decoded[0]
-        device_id = device_id or decoded[1]
+        device_id = device_id if device_id is not None else decoded[1]
         gateway_id = gateway_id or decoded[2]
-    if not gateway_id or device_id in (None, ""):
+    if not gateway_id or device_id is None:
         return None
 
     # The building names the portal on the first sensor ("Portal 3"); the
-    # device's own name is often generic.
-    sensors = _get(item, "sensors")
-    sensor_name = None
-    if isinstance(sensors, list) and sensors and isinstance(sensors[0], dict):
-        sensor_name = sensors[0].get("name")
-    name = str(sensor_name or _get(item, "name", "alias") or f"Alfred {device_id}")
+    # device's own name is generic ("ALFRED_DUMMYComm103: Dummy Switch").
+    name = str(sensor.get("name") or _get(item, "name", "alias") or f"Alfred {device_id}")
+    room = sensor.get("room")
     enabled = _get(item, "enabled")
 
     return AccessDevice(
         gateway_id=str(gateway_id),
         device_id=str(device_id),
-        sensor_id=str(sensor_id),
+        sensor_id=str(sensor_id) if sensor_id is not None else "0",
         name=name.strip(),
-        kind=guess_kind(name),
+        kind=guess_kind(name, room if isinstance(room, str) else None),
         enabled=True if enabled is None else bool(enabled),
         raw=item,
     )
@@ -212,7 +278,8 @@ def parse_gateway(gateway_id: str, payload: Any) -> GatewayInfo:
     if not isinstance(item, dict):
         item = {}
     firmware = _get(item, "firmware_version", "firmware", "fw_version", "version", "sw_version")
-    model = _get(item, "model", "hardware_version", "type")
+    # Not `type`: on the live API that is the sharing mode ("shared").
+    model = _get(item, "model", "sku", "hw_version", "hardware_version")
     return GatewayInfo(
         id=gateway_id,
         firmware=str(firmware) if firmware is not None else None,

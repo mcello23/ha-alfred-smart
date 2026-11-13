@@ -28,6 +28,11 @@ UPDATE_GRACE_PERIOD: Final = timedelta(minutes=15)
 # Gateways and common areas barely change; no need to read them every poll.
 SLOW_REFRESH_INTERVAL: Final = timedelta(hours=1)
 
+# The common-area listing is not confirmed: on a real account it answers 503
+# every time, not 404. After this many failures in a row, stop asking until
+# the integration reloads (a 404 stops it at once).
+COMMON_AREAS_MAX_FAILURES: Final = 3
+
 # `/devices/interact` only answers after the physical gateway acknowledges.
 INTERACT_TIMEOUT: Final = 30
 READ_TIMEOUT: Final = 25

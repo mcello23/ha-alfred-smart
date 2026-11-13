@@ -1,8 +1,11 @@
 name: Release
 
+# Pushing a tag such as v0.2.0 publishes the release, with the zip attached.
+# HACS offers releases, so a fix only reaches users once it is tagged.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -15,10 +18,11 @@ jobs:
       - name: Check that manifest.json matches the tag
         run: |
           version=$(jq -r .version custom_components/alfred_smart/manifest.json)
-          test "v$version" = "${{ github.event.release.tag_name }}" || {
-            echo "manifest.json says $version, tag is ${{ github.event.release.tag_name }}"; exit 1; }
+          test "v$version" = "${{ github.ref_name }}" || {
+            echo "manifest.json says $version, tag is ${{ github.ref_name }}"; exit 1; }
       - name: Zip the integration
         run: cd custom_components/alfred_smart && zip -r ../../alfred_smart.zip . -x '__pycache__/*'
       - uses: softprops/action-gh-release@v2
         with:
           files: alfred_smart.zip
+          generate_release_notes: true
